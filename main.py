@@ -4,21 +4,19 @@ from game.board import Board
 def main() -> None:
     board = Board()
 
-    board.points[0] = 1
-    board.points[3] = -1
+    board.player_one_bar = 1
+    board.points[2] = -1
 
-    print("Before capture:")
+    print("Before bar entry:")
     board.display()
 
-    board.move_piece(
+    board.enter_from_bar(
         player=1,
-        start=0,
-        end=3,
         die_value=3,
     )
 
     print()
-    print("After Player 1 captures Player 2:")
+    print("After Player 1 enters and captures:")
     board.display()
 
 

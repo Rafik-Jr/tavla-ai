@@ -104,6 +104,42 @@ def test_player_one_can_capture_player_two_piece() -> None:
     assert board.piece_count(-1) == 1
 
 
+def test_player_one_bar_entry_index() -> None:
+    board = Board()
+
+    assert board.bar_entry_index(player=1, die_value=1) == 0
+    assert board.bar_entry_index(player=1, die_value=6) == 5
+
+
+def test_player_two_bar_entry_index() -> None:
+    board = Board()
+
+    assert board.bar_entry_index(player=-1, die_value=1) == 23
+    assert board.bar_entry_index(player=-1, die_value=6) == 18
+
+
+def test_player_one_can_enter_from_bar() -> None:
+    board = Board()
+    board.player_one_bar = 1
+
+    board.enter_from_bar(player=1, die_value=3)
+
+    assert board.player_one_bar == 0
+    assert board.points[2] == 1
+    assert board.piece_count(1) == 1
+
+
+def test_player_two_can_enter_from_bar() -> None:
+    board = Board()
+    board.player_two_bar = 1
+
+    board.enter_from_bar(player=-1, die_value=3)
+
+    assert board.player_two_bar == 0
+    assert board.points[21] == -1
+    assert board.piece_count(-1) == 1
+
+
 def test_player_two_can_capture_player_one_piece() -> None:
     board = Board()
     board.points[23] = -1
@@ -226,6 +262,83 @@ def test_player_two_cannot_land_on_two_opponent_pieces() -> None:
         end=20,
         die_value=3,
     )
+
+
+def test_player_one_cannot_enter_on_blocked_point() -> None:
+    board = Board()
+    board.player_one_bar = 1
+    board.points[2] = -2
+
+    assert not board.is_bar_entry_legal(
+        player=1,
+        die_value=3,
+    )
+
+
+def test_player_two_cannot_enter_on_blocked_point() -> None:
+    board = Board()
+    board.player_two_bar = 1
+    board.points[21] = 2
+
+    assert not board.is_bar_entry_legal(
+        player=-1,
+        die_value=3,
+    )
+
+
+def test_player_one_bar_entry_can_capture() -> None:
+    board = Board()
+    board.player_one_bar = 1
+    board.points[2] = -1
+
+    board.enter_from_bar(player=1, die_value=3)
+
+    assert board.player_one_bar == 0
+    assert board.points[2] == 1
+    assert board.player_two_bar == 1
+
+
+def test_player_two_bar_entry_can_capture() -> None:
+    board = Board()
+    board.player_two_bar = 1
+    board.points[21] = 1
+
+    board.enter_from_bar(player=-1, die_value=3)
+
+    assert board.player_two_bar == 0
+    assert board.points[21] == -1
+    assert board.player_one_bar == 1
+
+
+def test_player_cannot_make_normal_move_with_piece_on_bar() -> None:
+    board = Board()
+    board.player_one_bar = 1
+    board.points[0] = 1
+
+    assert not board.is_simple_move_legal(
+        player=1,
+        start=0,
+        end=3,
+        die_value=3,
+    )
+
+
+def test_illegal_bar_entry_does_not_change_board() -> None:
+    board = Board()
+    board.player_one_bar = 1
+    board.points[2] = -2
+
+    original_points = board.points.copy()
+    original_bar = board.player_one_bar
+
+    with pytest.raises(ValueError):
+        board.enter_from_bar(
+            player=1,
+            die_value=3,
+        )
+
+    assert board.points == original_points
+    assert board.player_one_bar == original_bar
 
 
 def test_invalid_die_value_is_rejected() -> None:

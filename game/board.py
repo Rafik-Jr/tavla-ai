@@ -62,6 +62,85 @@ class Board:
         )
         return pieces_on_board + self.player_two_bar + self.player_two_off
 
+    def bar_entry_index(self, player: int, die_value: int) -> int:
+        """
+        Return the destination index for entering from the bar.
+        """
+
+        if player not in (1, -1):
+            raise ValueError("player must be 1 or -1")
+
+        if not 1 <= die_value <= 6:
+            raise ValueError("die_value must be between 1 and 6")
+
+        if player == 1:
+            return die_value - 1
+
+        return 24 - die_value
+
+    def is_bar_entry_legal(self, player: int, die_value: int) -> bool:
+        """
+        Check whether a player can enter one piece from the bar.
+        """
+
+        if player not in (1, -1):
+            return False
+
+        if not 1 <= die_value <= 6:
+            return False
+
+        if player == 1 and self.player_one_bar <= 0:
+            return False
+
+        if player == -1 and self.player_two_bar <= 0:
+            return False
+
+        destination_index = self.bar_entry_index(player, die_value)
+        destination = self.points[destination_index]
+
+        if player == 1 and destination < -1:
+            return False
+
+        if player == -1 and destination > 1:
+            return False
+
+        return True
+
+    def enter_from_bar(self, player: int, die_value: int) -> None:
+        """
+        Enter one piece from the bar.
+
+        This supports entering onto:
+        - an empty point
+        - a friendly point
+        - one exposed opponent piece
+        """
+
+        if not self.is_bar_entry_legal(player, die_value):
+            raise ValueError("Illegal bar entry")
+
+        destination_index = self.bar_entry_index(player, die_value)
+        destination = self.points[destination_index]
+
+        if player == 1:
+            self.player_one_bar -= 1
+
+            if destination == -1:
+                self.points[destination_index] = 1
+                self.player_two_bar += 1
+            else:
+                self.points[destination_index] += 1
+
+            return
+
+        self.player_two_bar -= 1
+
+        if destination == 1:
+            self.points[destination_index] = -1
+            self.player_one_bar += 1
+        else:
+            self.points[destination_index] -= 1
+
     def is_simple_move_legal(
         self,
         player: int,
@@ -85,6 +164,12 @@ class Board:
         """
 
         if player not in (1, -1):
+            return False
+
+        if player == 1 and self.player_one_bar > 0:
+            return False
+
+        if player == -1 and self.player_two_bar > 0:
             return False
 
         if not 0 <= start < 24:
