@@ -45,3 +45,54 @@ def test_piece_count_rejects_invalid_player() -> None:
 
     with pytest.raises(ValueError):
         board.piece_count(2)
+
+
+def test_player_one_can_move_to_empty_point() -> None:
+    board = Board.starting_position()
+
+    board.move_piece(player=1, start=0, end=1)
+
+    assert board.points[0] == 1
+    assert board.points[1] == 1
+    assert board.piece_count(1) == 15
+
+
+def test_player_two_can_move_to_empty_point() -> None:
+    board = Board.starting_position()
+
+    board.move_piece(player=-1, start=23, end=22)
+
+    assert board.points[23] == -1
+    assert board.points[22] == -1
+    assert board.piece_count(-1) == 15
+
+
+def test_cannot_move_from_empty_point() -> None:
+    board = Board.starting_position()
+
+    with pytest.raises(ValueError):
+        board.move_piece(player=1, start=1, end=2)
+
+
+def test_cannot_move_opponents_piece() -> None:
+    board = Board.starting_position()
+
+    with pytest.raises(ValueError):
+        board.move_piece(player=1, start=23, end=22)
+
+
+def test_cannot_move_to_point_with_opponent_pieces() -> None:
+    board = Board.starting_position()
+
+    with pytest.raises(ValueError):
+        board.move_piece(player=1, start=0, end=5)
+
+
+def test_move_rejects_invalid_board_indexes() -> None:
+    board = Board.starting_position()
+
+    with pytest.raises(ValueError):
+        board.move_piece(player=1, start=-1, end=1)
+
+    with pytest.raises(ValueError):
+        board.move_piece(player=1, start=0, end=24)

@@ -62,6 +62,43 @@ class Board:
         )
         return pieces_on_board + self.player_two_bar + self.player_two_off
 
+    def move_piece(self, player: int, start: int, end: int) -> None:
+        """
+        Move one piece from start to end.
+
+        This currently supports only simple moves:
+        - no captures
+        - no bar movement
+        - no bearing off
+        """
+
+        if player not in (1, -1):
+            raise ValueError("player must be 1 or -1")
+
+        if not 0 <= start < 24:
+            raise ValueError("start must be between 0 and 23")
+
+        if not 0 <= end < 24:
+            raise ValueError("end must be between 0 and 23")
+
+        start_count = self.points[start]
+        end_count = self.points[end]
+
+        if player == 1 and start_count <= 0:
+            raise ValueError("Player 1 has no piece at the starting point")
+
+        if player == -1 and start_count >= 0:
+            raise ValueError("Player 2 has no piece at the starting point")
+
+        if player == 1 and end_count < 0:
+            raise ValueError("Destination contains opponent pieces")
+
+        if player == -1 and end_count > 0:
+            raise ValueError("Destination contains opponent pieces")
+
+        self.points[start] -= player
+        self.points[end] += player
+
     def display(self) -> None:
         print("Tavla Board")
         print("-" * 50)
