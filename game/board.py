@@ -128,7 +128,14 @@ class Board:
         """
         Apply a simple legal move.
 
-        Captures are not implemented yet.
+        Supports:
+        - normal moves
+        - capturing one exposed opponent piece
+
+        Does not yet support:
+        - entering from the bar
+        - bearing off
+        - complete dice-turn logic
         """
 
         if not self.is_simple_move_legal(
@@ -141,13 +148,18 @@ class Board:
 
         destination = self.points[end]
 
+        self.points[start] -= player
+
         if player == 1 and destination == -1:
-            raise ValueError("Captures are not implemented yet")
+            self.points[end] = 1
+            self.player_two_bar += 1
+            return
 
         if player == -1 and destination == 1:
-            raise ValueError("Captures are not implemented yet")
+            self.points[end] = -1
+            self.player_one_bar += 1
+            return
 
-        self.points[start] -= player
         self.points[end] += player
 
     def display(self) -> None:

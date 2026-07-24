@@ -85,6 +85,44 @@ def test_player_two_can_move_forward_using_die() -> None:
     assert board.piece_count(-1) == 15
 
 
+def test_player_one_can_capture_player_two_piece() -> None:
+    board = Board()
+    board.points[0] = 1
+    board.points[3] = -1
+
+    board.move_piece(
+        player=1,
+        start=0,
+        end=3,
+        die_value=3,
+    )
+
+    assert board.points[0] == 0
+    assert board.points[3] == 1
+    assert board.player_two_bar == 1
+    assert board.piece_count(1) == 1
+    assert board.piece_count(-1) == 1
+
+
+def test_player_two_can_capture_player_one_piece() -> None:
+    board = Board()
+    board.points[23] = -1
+    board.points[20] = 1
+
+    board.move_piece(
+        player=-1,
+        start=23,
+        end=20,
+        die_value=3,
+    )
+
+    assert board.points[23] == 0
+    assert board.points[20] == -1
+    assert board.player_one_bar == 1
+    assert board.piece_count(1) == 1
+    assert board.piece_count(-1) == 1
+
+
 def test_player_one_cannot_move_backward() -> None:
     board = Board.starting_position()
 
@@ -160,6 +198,32 @@ def test_point_with_one_opponent_piece_is_not_blocked() -> None:
         player=1,
         start=0,
         end=3,
+        die_value=3,
+    )
+
+
+def test_player_one_cannot_land_on_two_opponent_pieces() -> None:
+    board = Board()
+    board.points[0] = 1
+    board.points[3] = -2
+
+    assert not board.is_simple_move_legal(
+        player=1,
+        start=0,
+        end=3,
+        die_value=3,
+    )
+
+
+def test_player_two_cannot_land_on_two_opponent_pieces() -> None:
+    board = Board()
+    board.points[23] = -1
+    board.points[20] = 2
+
+    assert not board.is_simple_move_legal(
+        player=-1,
+        start=23,
+        end=20,
         die_value=3,
     )
 
