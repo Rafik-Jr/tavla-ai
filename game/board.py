@@ -5,6 +5,8 @@ Game rules and board behavior will be implemented separately.
 
 from dataclasses import dataclass, field
 
+from game.move import Move
+
 
 @dataclass
 class Board:
@@ -140,6 +142,95 @@ class Board:
             self.player_one_bar += 1
         else:
             self.points[destination_index] -= 1
+
+    def legal_moves_for_die(
+        self,
+        player: int,
+        die_value: int,
+    ) -> list[Move]:
+        """
+        Return every legal move the player can make with one die.
+
+        If the player has a piece on the bar, only bar-entry moves
+        are considered.
+        """
+
+        if player not in (1, -1):
+            raise ValueError("player must be 1 or -1")
+
+        if not 1 <= die_value <= 6:
+            raise ValueError("die_value must be between 1 and 6")
+
+        if player == 1 and self.player_one_bar > 0:
+            if not self.is_bar_entry_legal(player, die_value):
+                return []
+
+            destination = self.bar_entry_index(player, die_value)
+
+            return [
+                Move(
+                    start=None,
+                    end=destination,
+                    die_value=die_value,
+                )
+            ]
+
+        if player == -1 and self.player_two_bar > 0:
+            if not self.is_bar_entry_legal(player, die_value):
+                return []
+
+            destination = self.bar_entry_index(player, die_value)
+
+            return [
+                Move(
+                    start=None,
+                    end=destination,
+                    die_value=die_value,
+                )
+            ]
+
+        legal_moves: list[Move] = []
+
+        for start in range(24):
+            end = start + die_value if player == 1 else start - die_value
+
+            if self.is_simple_move_legal(
+                player=player,
+                start=start,
+                end=end,
+                die_value=die_value,
+            ):
+                legal_moves.append(
+                    Move(
+                        start=start,
+                        end=end,
+                        die_value=die_value,
+                    )
+                )
+
+        return legal_moves
+
+    def apply_move(self, player: int, move: Move) -> None:
+        """
+        Apply a Move object to the board.
+        """
+
+        if move.is_bar_entry:
+            self.enter_from_bar(
+                player=player,
+                die_value=move.die_value,
+            )
+            return
+
+        if move.start is None:
+            raise ValueError("Normal move must have a starting point")
+
+        self.move_piece(
+            player=player,
+            start=move.start,
+            end=move.end,
+            die_value=move.die_value,
+        )
 
     def is_simple_move_legal(
         self,

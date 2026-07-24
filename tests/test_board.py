@@ -10,6 +10,7 @@ def test_board_module_imports() -> None:
 import pytest
 
 from game.board import Board
+from game.move import Move
 
 
 def test_empty_board_has_24_points() -> None:
@@ -102,6 +103,133 @@ def test_player_one_can_capture_player_two_piece() -> None:
     assert board.player_two_bar == 1
     assert board.piece_count(1) == 1
     assert board.piece_count(-1) == 1
+
+
+def test_generate_player_one_legal_moves_for_die() -> None:
+    board = Board()
+    board.points[0] = 1
+    board.points[4] = 2
+
+    moves = board.legal_moves_for_die(
+        player=1,
+        die_value=3,
+    )
+
+    assert moves == [
+        Move(start=0, end=3, die_value=3),
+        Move(start=4, end=7, die_value=3),
+    ]
+
+
+def test_generate_player_two_legal_moves_for_die() -> None:
+    board = Board()
+    board.points[23] = -1
+    board.points[19] = -2
+
+    moves = board.legal_moves_for_die(
+        player=-1,
+        die_value=3,
+    )
+
+    assert moves == [
+        Move(start=19, end=16, die_value=3),
+        Move(start=23, end=20, die_value=3),
+    ]
+
+
+def test_blocked_moves_are_not_generated() -> None:
+    board = Board()
+    board.points[0] = 1
+    board.points[3] = -2
+
+    moves = board.legal_moves_for_die(
+        player=1,
+        die_value=3,
+    )
+
+    assert moves == []
+
+
+def test_capture_move_is_generated() -> None:
+    board = Board()
+    board.points[0] = 1
+    board.points[3] = -1
+
+    moves = board.legal_moves_for_die(
+        player=1,
+        die_value=3,
+    )
+
+    assert moves == [
+        Move(start=0, end=3, die_value=3),
+    ]
+
+
+def test_only_bar_entry_is_generated_when_piece_is_on_bar() -> None:
+    board = Board()
+    board.player_one_bar = 1
+    board.points[10] = 2
+
+    moves = board.legal_moves_for_die(
+        player=1,
+        die_value=3,
+    )
+
+    assert moves == [
+        Move(start=None, end=2, die_value=3),
+    ]
+
+
+def test_no_move_generated_when_bar_entry_is_blocked() -> None:
+    board = Board()
+    board.player_one_bar = 1
+    board.points[2] = -2
+    board.points[10] = 2
+
+    moves = board.legal_moves_for_die(
+        player=1,
+        die_value=3,
+    )
+
+    assert moves == []
+
+
+def test_apply_move_applies_regular_move() -> None:
+    board = Board()
+    board.points[0] = 1
+
+    move = Move(
+        start=0,
+        end=3,
+        die_value=3,
+    )
+
+    board.apply_move(
+        player=1,
+        move=move,
+    )
+
+    assert board.points[0] == 0
+    assert board.points[3] == 1
+
+
+def test_apply_move_applies_bar_entry() -> None:
+    board = Board()
+    board.player_one_bar = 1
+
+    move = Move(
+        start=None,
+        end=2,
+        die_value=3,
+    )
+
+    board.apply_move(
+        player=1,
+        move=move,
+    )
+
+    assert board.player_one_bar == 0
+    assert board.points[2] == 1
 
 
 def test_player_one_bar_entry_index() -> None:

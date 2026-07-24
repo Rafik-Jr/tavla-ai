@@ -2,22 +2,26 @@ from game.board import Board
 
 
 def main() -> None:
-    board = Board()
+    board = Board.starting_position()
 
-    board.player_one_bar = 1
-    board.points[2] = -1
-
-    print("Before bar entry:")
-    board.display()
-
-    board.enter_from_bar(
+    die_value = 3
+    legal_moves = board.legal_moves_for_die(
         player=1,
-        die_value=3,
+        die_value=die_value,
     )
 
-    print()
-    print("After Player 1 enters and captures:")
-    board.display()
+    print(f"Player 1 legal moves using die {die_value}:")
+
+    for move in legal_moves:
+        if move.is_bar_entry:
+            print(
+                f"Enter from bar onto point {move.end + 1}"
+            )
+        else:
+            print(
+                f"Move from point {move.start + 1} "
+                f"to point {move.end + 1}"
+            )
 
 
 if __name__ == "__main__":
