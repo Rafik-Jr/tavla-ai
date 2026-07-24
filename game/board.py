@@ -381,16 +381,24 @@ class Board:
         moves: Sequence[Move],
     ) -> None:
         """
-        Apply a sequence of moves to the board.
+        Apply a sequence atomically.
 
-        The caller should pass a sequence returned by legal_turns().
+        The real board changes only if every move succeeds.
         """
 
+        candidate = self.copy()
+
         for move in moves:
-            self.apply_move(
+            candidate.apply_move(
                 player=player,
                 move=move,
             )
+
+        self.points = candidate.points
+        self.player_one_bar = candidate.player_one_bar
+        self.player_two_bar = candidate.player_two_bar
+        self.player_one_off = candidate.player_one_off
+        self.player_two_off = candidate.player_two_off
 
     def legal_turns(
         self,
@@ -495,6 +503,13 @@ class Board:
             dice_index: int,
             moves_so_far: tuple[Move, ...],
         ) -> None:
+            if (
+                board.player_one_off == 15
+                or board.player_two_off == 15
+            ):
+                completed_turns.append(moves_so_far)
+                return
+
             if dice_index >= len(dice):
                 completed_turns.append(moves_so_far)
                 return
