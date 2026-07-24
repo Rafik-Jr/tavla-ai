@@ -390,6 +390,187 @@ def test_apply_turn_applies_all_moves() -> None:
     assert board.points[5] == 1
 
 
+def test_player_one_all_pieces_in_home() -> None:
+    board = Board()
+    board.points[18] = 5
+    board.points[22] = 10
+
+    assert board.all_pieces_in_home(player=1)
+
+
+def test_player_one_not_all_pieces_in_home() -> None:
+    board = Board()
+    board.points[17] = 1
+    board.points[22] = 14
+
+    assert not board.all_pieces_in_home(player=1)
+
+
+def test_player_two_all_pieces_in_home() -> None:
+    board = Board()
+    board.points[0] = -5
+    board.points[5] = -10
+
+    assert board.all_pieces_in_home(player=-1)
+
+
+def test_piece_on_bar_prevents_bearing_off() -> None:
+    board = Board()
+    board.points[20] = 14
+    board.player_one_bar = 1
+
+    assert not board.all_pieces_in_home(player=1)
+
+
+def test_player_one_can_bear_off_exactly() -> None:
+    board = Board()
+    board.points[21] = 1
+
+    assert board.is_bear_off_legal(
+        player=1,
+        start=21,
+        die_value=3,
+    )
+
+    board.bear_off(
+        player=1,
+        start=21,
+        die_value=3,
+    )
+
+    assert board.points[21] == 0
+    assert board.player_one_off == 1
+    assert board.piece_count(1) == 1
+
+
+def test_player_two_can_bear_off_exactly() -> None:
+    board = Board()
+    board.points[2] = -1
+
+    assert board.is_bear_off_legal(
+        player=-1,
+        start=2,
+        die_value=3,
+    )
+
+    board.bear_off(
+        player=-1,
+        start=2,
+        die_value=3,
+    )
+
+    assert board.points[2] == 0
+    assert board.player_two_off == 1
+
+
+def test_cannot_bear_off_before_all_pieces_are_home() -> None:
+    board = Board()
+    board.points[10] = 1
+    board.points[21] = 1
+
+    assert not board.is_bear_off_legal(
+        player=1,
+        start=21,
+        die_value=3,
+    )
+
+
+def test_player_one_can_use_oversized_die() -> None:
+    board = Board()
+    board.points[21] = 1
+
+    assert board.is_bear_off_legal(
+        player=1,
+        start=21,
+        die_value=5,
+    )
+
+
+def test_player_one_cannot_use_oversized_die_with_farther_piece() -> None:
+    board = Board()
+    board.points[18] = 1
+    board.points[21] = 1
+
+    assert not board.is_bear_off_legal(
+        player=1,
+        start=21,
+        die_value=5,
+    )
+
+
+def test_player_two_can_use_oversized_die() -> None:
+    board = Board()
+    board.points[2] = -1
+
+    assert board.is_bear_off_legal(
+        player=-1,
+        start=2,
+        die_value=5,
+    )
+
+
+def test_player_two_cannot_use_oversized_die_with_farther_piece() -> None:
+    board = Board()
+    board.points[2] = -1
+    board.points[5] = -1
+
+    assert not board.is_bear_off_legal(
+        player=-1,
+        start=2,
+        die_value=5,
+    )
+
+
+def test_legal_moves_include_bear_off() -> None:
+    board = Board()
+    board.points[21] = 1
+
+    moves = board.legal_moves_for_die(
+        player=1,
+        die_value=3,
+    )
+
+    assert moves == [
+        Move(start=21, end=None, die_value=3),
+    ]
+
+
+def test_apply_move_can_bear_off() -> None:
+    board = Board()
+    board.points[21] = 1
+
+    move = Move(
+        start=21,
+        end=None,
+        die_value=3,
+    )
+
+    board.apply_move(
+        player=1,
+        move=move,
+    )
+
+    assert board.points[21] == 0
+    assert board.player_one_off == 1
+
+
+def test_full_turn_can_bear_off_multiple_pieces() -> None:
+    board = Board()
+    board.points[21] = 1
+    board.points[22] = 1
+
+    turns = board.legal_turns(
+        player=1,
+        die_one=2,
+        die_two=3,
+    )
+
+    assert (
+        Move(start=22, end=None, die_value=2),
+        Move(start=21, end=None, die_value=3),
+    ) in turns
+
+
 def test_player_one_bar_entry_index() -> None:
     board = Board()
 

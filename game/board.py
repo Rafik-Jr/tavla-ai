@@ -155,6 +155,112 @@ class Board:
             player_two_off=self.player_two_off,
         )
 
+    def all_pieces_in_home(self, player: int) -> bool:
+        """
+        Return whether all of the player's remaining board pieces
+        are inside their home board.
+
+        Pieces already borne off are allowed.
+        Pieces on the bar prevent bearing off.
+        """
+
+        if player not in (1, -1):
+            raise ValueError("player must be 1 or -1")
+
+        if player == 1:
+            if self.player_one_bar > 0:
+                return False
+
+            return all(count <= 0 for count in self.points[:18])
+
+        if self.player_two_bar > 0:
+            return False
+
+        return all(count >= 0 for count in self.points[6:])
+
+    def is_bear_off_legal(
+        self,
+        player: int,
+        start: int,
+        die_value: int,
+    ) -> bool:
+        """
+        Check whether one piece may be borne off using a die.
+
+        This initially supports:
+        - exact bearing off
+        - oversized dice when no piece is farther from the exit
+        """
+
+        if player not in (1, -1):
+            return False
+
+        if not 0 <= start < 24:
+            return False
+
+        if not 1 <= die_value <= 6:
+            return False
+
+        if not self.all_pieces_in_home(player):
+            return False
+
+        start_count = self.points[start]
+
+        if player == 1:
+            if start_count <= 0:
+                return False
+
+            if start < 18:
+                return False
+
+            distance_to_exit = 24 - start
+
+            if die_value == distance_to_exit:
+                return True
+
+            if die_value < distance_to_exit:
+                return False
+
+            return all(self.points[index] <= 0 for index in range(18, start))
+
+        if start_count >= 0:
+            return False
+
+        if start > 5:
+            return False
+
+        distance_to_exit = start + 1
+
+        if die_value == distance_to_exit:
+            return True
+
+        if die_value < distance_to_exit:
+            return False
+
+        return all(self.points[index] >= 0 for index in range(start + 1, 6))
+
+    def bear_off(
+        self,
+        player: int,
+        start: int,
+        die_value: int,
+    ) -> None:
+        """Bear one piece off the board."""
+
+        if not self.is_bear_off_legal(
+            player=player,
+            start=start,
+            die_value=die_value,
+        ):
+            raise ValueError("Illegal bear off")
+
+        self.points[start] -= player
+
+        if player == 1:
+            self.player_one_off += 1
+        else:
+            self.player_two_off += 1
+
     def legal_moves_for_die(
         self,
         player: int,
@@ -219,6 +325,20 @@ class Board:
                         die_value=die_value,
                     )
                 )
+                continue
+
+            if self.is_bear_off_legal(
+                player=player,
+                start=start,
+                die_value=die_value,
+            ):
+                legal_moves.append(
+                    Move(
+                        start=start,
+                        end=None,
+                        die_value=die_value,
+                    )
+                )
 
         return legal_moves
 
@@ -234,8 +354,19 @@ class Board:
             )
             return
 
-        if move.start is None:
-            raise ValueError("Normal move must have a starting point")
+        if move.is_bear_off:
+            if move.start is None:
+                raise ValueError("Bear-off move must have a starting point")
+
+            self.bear_off(
+                player=player,
+                start=move.start,
+                die_value=move.die_value,
+            )
+            return
+
+        if move.start is None or move.end is None:
+            raise ValueError("Normal move requires start and end points")
 
         self.move_piece(
             player=player,
@@ -338,7 +469,7 @@ class Board:
             key=lambda turn: tuple(
                 (
                     -1 if move.start is None else move.start,
-                    move.end,
+                    24 if move.end is None else move.end,
                     move.die_value,
                 )
                 for move in turn
@@ -352,6 +483,9 @@ class Board:
     ) -> list[tuple[Move, ...]]:
         """
         Generate move sequences using one specific dice order.
+
+        The search uses the chosen dice in order and may stop early when
+        a die has no legal move from the current board state.
         """
 
         completed_turns: list[tuple[Move, ...]] = []
@@ -366,7 +500,6 @@ class Board:
                 return
 
             die_value = dice[dice_index]
-
             available_moves = board.legal_moves_for_die(
                 player=player,
                 die_value=die_value,
