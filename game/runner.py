@@ -1,19 +1,21 @@
 from dataclasses import dataclass
 
-from bots.random_bot import RandomBot
+from bots.base import Bot
 from game.game import Game
 
 
-@dataclass
+@dataclass(frozen=True)
 class GameResult:
     winner: int
     turns_played: int
+    player_one_name: str
+    player_two_name: str
 
 
 def play_game(
     game: Game,
-    player_one_bot: RandomBot,
-    player_two_bot: RandomBot,
+    player_one_bot: Bot,
+    player_two_bot: Bot,
     max_turns: int = 10_000,
     verbose: bool = False,
 ) -> GameResult:
@@ -69,4 +71,6 @@ def play_game(
     return GameResult(
         winner=winner,
         turns_played=turns_played,
+        player_one_name=player_one_bot.name,
+        player_two_name=player_two_bot.name,
     )

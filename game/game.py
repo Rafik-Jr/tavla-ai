@@ -63,10 +63,7 @@ class Game:
         except ValueError as exc:
             raise ValueError("Illegal turn") from exc
 
-        if not (
-            candidate_board.player_one_off == 15
-            or candidate_board.player_two_off == 15
-        ) and moves not in legal_turns:
+        if moves not in legal_turns:
             raise ValueError("Illegal turn")
 
         self.board = candidate_board

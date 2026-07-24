@@ -470,7 +470,20 @@ class Board:
             ]
 
             if higher_die_turns:
-                legal_turns = higher_die_turns
+                winning_turns = []
+                for turn in legal_turns:
+                    candidate = self.copy()
+                    candidate.apply_turn(player=player, moves=turn)
+                    if (
+                        candidate.player_one_off == 15
+                        or candidate.player_two_off == 15
+                    ):
+                        winning_turns.append(turn)
+
+                legal_turns = higher_die_turns + [
+                    turn for turn in winning_turns
+                    if turn not in higher_die_turns
+                ]
 
         return sorted(
             legal_turns,
