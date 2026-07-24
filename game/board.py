@@ -3,6 +3,7 @@
 Game rules and board behavior will be implemented separately.
 """
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 from game.move import Move
@@ -143,6 +144,17 @@ class Board:
         else:
             self.points[destination_index] -= 1
 
+    def copy(self) -> "Board":
+        """Return an independent copy of the board."""
+
+        return Board(
+            points=self.points.copy(),
+            player_one_bar=self.player_one_bar,
+            player_two_bar=self.player_two_bar,
+            player_one_off=self.player_one_off,
+            player_two_off=self.player_two_off,
+        )
+
     def legal_moves_for_die(
         self,
         player: int,
@@ -231,6 +243,159 @@ class Board:
             end=move.end,
             die_value=move.die_value,
         )
+
+    def apply_turn(
+        self,
+        player: int,
+        moves: Sequence[Move],
+    ) -> None:
+        """
+        Apply a sequence of moves to the board.
+
+        The caller should pass a sequence returned by legal_turns().
+        """
+
+        for move in moves:
+            self.apply_move(
+                player=player,
+                move=move,
+            )
+
+    def legal_turns(
+        self,
+        player: int,
+        die_one: int,
+        die_two: int,
+    ) -> list[tuple[Move, ...]]:
+        """
+        Generate every legal move sequence for a complete dice roll.
+
+        Rules currently supported:
+        - both dice orders are considered
+        - doubles provide four moves
+        - the maximum possible number of dice must be used
+        - when only one die can be used, the higher die must be used
+        """
+
+        if player not in (1, -1):
+            raise ValueError("player must be 1 or -1")
+
+        if not 1 <= die_one <= 6 or not 1 <= die_two <= 6:
+            raise ValueError("dice must be between 1 and 6")
+
+        if die_one == die_two:
+            dice_orders = [(die_one, die_one, die_one, die_one)]
+        else:
+            dice_orders = [(die_one, die_two), (die_two, die_one)]
+
+        generated_turns: set[tuple[Move, ...]] = set()
+
+        for dice_order in dice_orders:
+            playable_dice: list[int] = []
+
+            for die_value in dice_order:
+                if self.legal_moves_for_die(
+                    player=player,
+                    die_value=die_value,
+                ):
+                    playable_dice.append(die_value)
+                else:
+                    break
+
+            if not playable_dice:
+                continue
+
+            turns = self._generate_turns_for_dice_order(
+                player=player,
+                dice=playable_dice,
+            )
+            generated_turns.update(turns)
+
+        if not generated_turns:
+            return []
+
+        maximum_moves = max(len(turn) for turn in generated_turns)
+
+        legal_turns = [
+            turn for turn in generated_turns if len(turn) == maximum_moves
+        ]
+
+        if maximum_moves == 0:
+            return []
+
+        if maximum_moves == 1 and die_one != die_two:
+            higher_die = max(die_one, die_two)
+
+            higher_die_turns = [
+                turn for turn in legal_turns if turn[0].die_value == higher_die
+            ]
+
+            if higher_die_turns:
+                legal_turns = higher_die_turns
+
+        return sorted(
+            legal_turns,
+            key=lambda turn: tuple(
+                (
+                    -1 if move.start is None else move.start,
+                    move.end,
+                    move.die_value,
+                )
+                for move in turn
+            ),
+        )
+
+    def _generate_turns_for_dice_order(
+        self,
+        player: int,
+        dice: Sequence[int],
+    ) -> list[tuple[Move, ...]]:
+        """
+        Generate move sequences using one specific dice order.
+        """
+
+        completed_turns: list[tuple[Move, ...]] = []
+
+        def search(
+            board: Board,
+            dice_index: int,
+            moves_so_far: tuple[Move, ...],
+        ) -> None:
+            if dice_index >= len(dice):
+                completed_turns.append(moves_so_far)
+                return
+
+            die_value = dice[dice_index]
+
+            available_moves = board.legal_moves_for_die(
+                player=player,
+                die_value=die_value,
+            )
+
+            if not available_moves:
+                completed_turns.append(moves_so_far)
+                return
+
+            for move in available_moves:
+                next_board = board.copy()
+                next_board.apply_move(
+                    player=player,
+                    move=move,
+                )
+
+                search(
+                    board=next_board,
+                    dice_index=dice_index + 1,
+                    moves_so_far=moves_so_far + (move,),
+                )
+
+        search(
+            board=self.copy(),
+            dice_index=0,
+            moves_so_far=(),
+        )
+
+        return completed_turns
 
     def is_simple_move_legal(
         self,

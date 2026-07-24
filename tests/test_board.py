@@ -1,4 +1,6 @@
 """Tests for the board module."""
+import game.board
+import game
 
 
 def test_board_module_imports() -> None:
@@ -103,6 +105,18 @@ def test_player_one_can_capture_player_two_piece() -> None:
     assert board.player_two_bar == 1
     assert board.piece_count(1) == 1
     assert board.piece_count(-1) == 1
+
+
+def test_board_copy_is_independent() -> None:
+    board = Board()
+    board.points[0] = 1
+
+    copied_board = board.copy()
+    copied_board.points[0] = 0
+    copied_board.points[3] = 1
+
+    assert board.points[0] == 1
+    assert board.points[3] == 0
 
 
 def test_generate_player_one_legal_moves_for_die() -> None:
@@ -230,6 +244,150 @@ def test_apply_move_applies_bar_entry() -> None:
 
     assert board.player_one_bar == 0
     assert board.points[2] == 1
+
+
+def test_legal_turn_uses_both_dice() -> None:
+    board = Board()
+    board.points[0] = 1
+
+    turns = board.legal_turns(
+        player=1,
+        die_one=2,
+        die_two=3,
+    )
+
+    assert (
+        Move(start=0, end=2, die_value=2),
+        Move(start=2, end=5, die_value=3),
+    ) in turns
+
+    assert (
+        Move(start=0, end=3, die_value=3),
+        Move(start=3, end=5, die_value=2),
+    ) in turns
+
+    assert all(len(turn) == 2 for turn in turns)
+
+
+def test_legal_turn_considers_different_pieces() -> None:
+    board = Board()
+    board.points[0] = 1
+    board.points[5] = 1
+
+    turns = board.legal_turns(
+        player=1,
+        die_one=2,
+        die_two=3,
+    )
+
+    assert (
+        Move(start=0, end=2, die_value=2),
+        Move(start=5, end=8, die_value=3),
+    ) in turns
+
+
+def test_blocked_die_can_be_skipped() -> None:
+    board = Board()
+    board.points[0] = 1
+    board.points[2] = -2
+
+    turns = board.legal_turns(
+        player=1,
+        die_one=2,
+        die_two=3,
+    )
+
+    assert turns == [
+        (
+            Move(start=0, end=3, die_value=3),
+        ),
+    ]
+
+
+def test_only_available_die_is_used() -> None:
+    board = Board()
+    board.points[0] = 1
+    board.points[2] = -2
+
+    turns = board.legal_turns(
+        player=1,
+        die_one=2,
+        die_two=3,
+    )
+
+    assert turns == [
+        (
+            Move(start=0, end=3, die_value=3),
+        ),
+    ]
+
+
+def test_doubles_can_generate_four_moves() -> None:
+    board = Board()
+    board.points[0] = 1
+
+    turns = board.legal_turns(
+        player=1,
+        die_one=2,
+        die_two=2,
+    )
+
+    assert (
+        Move(start=0, end=2, die_value=2),
+        Move(start=2, end=4, die_value=2),
+        Move(start=4, end=6, die_value=2),
+        Move(start=6, end=8, die_value=2),
+    ) in turns
+
+    assert all(len(turn) == 4 for turn in turns)
+
+
+def test_bar_piece_must_enter_before_other_moves() -> None:
+    board = Board()
+    board.player_one_bar = 1
+    board.points[10] = 1
+
+    turns = board.legal_turns(
+        player=1,
+        die_one=2,
+        die_two=3,
+    )
+
+    assert all(turn[0].is_bar_entry for turn in turns)
+
+
+def test_no_legal_turn_returns_empty_list() -> None:
+    board = Board()
+    board.player_one_bar = 1
+
+    for index in range(6):
+        board.points[index] = -2
+
+    turns = board.legal_turns(
+        player=1,
+        die_one=2,
+        die_two=5,
+    )
+
+    assert turns == []
+
+
+def test_apply_turn_applies_all_moves() -> None:
+    board = Board()
+    board.points[0] = 1
+
+    turn = (
+        Move(start=0, end=2, die_value=2),
+        Move(start=2, end=5, die_value=3),
+    )
+
+    board.apply_turn(
+        player=1,
+        moves=turn,
+    )
+
+    assert board.points[0] == 0
+    assert board.points[5] == 1
 
 
 def test_player_one_bar_entry_index() -> None:
