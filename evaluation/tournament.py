@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 from random import Random
 from time import perf_counter
+from typing import Callable
 
+from bots.base import Bot
 from bots.random_bot import RandomBot
 from game.game import Game
 from game.runner import play_game
@@ -40,12 +42,26 @@ class TournamentResult:
         return self.games_played / self.elapsed_seconds
 
 
-def run_tournament(number_of_games: int, seed: int = 42) -> TournamentResult:
-    """Run a reproducible tournament between two random bots."""
+BotFactory = Callable[[Random], Bot]
+
+
+def run_tournament(
+    number_of_games: int,
+    seed: int = 42,
+    player_one_factory: BotFactory | None = None,
+    player_two_factory: BotFactory | None = None,
+) -> TournamentResult:
+    """Run a reproducible tournament using independently seeded bot factories."""
     if number_of_games <= 0:
         raise ValueError("number_of_games must be greater than zero")
 
     master_rng = Random(seed)
+    player_one_factory = player_one_factory or (
+        lambda rng: RandomBot(name="Random Bot A", rng=rng)
+    )
+    player_two_factory = player_two_factory or (
+        lambda rng: RandomBot(name="Random Bot B", rng=rng)
+    )
     player_one_wins = 0
     player_two_wins = 0
     total_turns = 0
@@ -53,8 +69,12 @@ def run_tournament(number_of_games: int, seed: int = 42) -> TournamentResult:
 
     for _ in range(number_of_games):
         game = Game(rng=Random(master_rng.randrange(1_000_000_000)))
-        player_one_bot = RandomBot("Random Bot A", Random(master_rng.randrange(1_000_000_000)))
-        player_two_bot = RandomBot("Random Bot B", Random(master_rng.randrange(1_000_000_000)))
+        player_one_bot = player_one_factory(
+            Random(master_rng.randrange(1_000_000_000))
+        )
+        player_two_bot = player_two_factory(
+            Random(master_rng.randrange(1_000_000_000))
+        )
         result = play_game(game, player_one_bot, player_two_bot)
         total_turns += result.turns_played
         if result.winner == 1:
